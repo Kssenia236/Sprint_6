@@ -1,9 +1,6 @@
-import allure
 import pytest
 from selenium import webdriver
-
 from pages.order_page import OrderPage
-
 
 class TestOrder:
     driver = None
@@ -14,9 +11,6 @@ class TestOrder:
         cls.driver = webdriver.Firefox()
         cls.driver.maximize_window()
 
-    @classmethod
-    def teardown_method(cls):
-        cls.driver.quit()
 
     @pytest.mark.parametrize(
         'name,last_name,address,subway,telephone_number,date,rental_period,color',
@@ -25,18 +19,14 @@ class TestOrder:
             ('Сергей', 'Сергеев', 'Москва, ул. Ленина, д. 2', 'Черкизовская', '22222222222', '15.03.2025',
              'двое суток', 'grey')
         ])
-    @allure.feature("Order Page")
-    @allure.story("Успешное оформление заказа самоката")
     def test_order_page(self, name, last_name, address, subway, telephone_number, date, rental_period, color):
-        with allure.step("Инициализация объекта страницы заказа"):
-            page = OrderPage(self.driver)
+        page = OrderPage(self.driver)
+        page.open_page(self.url)
+        page.order(name, last_name, address, subway, telephone_number, date, rental_period, color)
+        order_confirmation = page.confirm_order()
+        assert "Номер заказа:" in order_confirmation and "Запишите его" in order_confirmation
 
-        with allure.step("Открыть URL страницы заказа"):
-            page.open_page(self.url)
 
-        with allure.step("Заполнить и отправить форму заказа"):
-            page.order(name, last_name, address, subway, telephone_number, date, rental_period, color)
-
-        with allure.step("Проверить сообщение подтверждения заказа"):
-            order_confirmation = self.driver.find_element(*OrderPage.confirmation_message).text
-            assert "Номер заказа:" in order_confirmation and "Запишите его" in order_confirmation
+    @classmethod
+    def teardown_method(cls):
+        cls.driver.quit()
