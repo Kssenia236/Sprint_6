@@ -1,5 +1,6 @@
+import time
+
 import allure
-from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
@@ -11,60 +12,34 @@ from pages.base_page import BasePage
 class MainPage(BasePage):
     locators = MainPageLocators
 
+    def __init__(self, driver):
+        super().__init__(driver, url="https://qa-scooter.praktikum-services.ru")
+
+    @allure.step("Открытие главной страницы")
     def open_base_url(self):
-        with allure.step("Открытие базового URL"):
-            self.driver.get(self.url)
+        self.open_page()
 
+    @allure.step("Клик по верхней кнопке заказа")
     def click_order_button(self):
-        with allure.step("Ожидание кликабельности кнопки заказа"):
-            order_button = WebDriverWait(self.driver, 10).until(
-                EC.element_to_be_clickable(self.locators.order_button_1)
-            )
-        with allure.step("Прокрутка к первой кнопке заказа и клик по ней"):
-            self.driver.execute_script("arguments[0].scrollIntoView({behavior: 'smooth', block: 'center'});",
-                                       order_button)
-            ActionChains(self.driver).move_to_element(order_button).click().perform()
-        with allure.step("Ожидание перехода на страницу заказа"):
-            WebDriverWait(self.driver, 10).until(
-                EC.url_contains("https://qa-scooter.praktikum-services.ru/order")
-            )
+        button = self.find_clickable_element(self.locators.order_button_1)
+        self.scroll_to_element(button)
+        self.click_element(button)
+        self.wait_for_url_contains("order")
 
+    @allure.step("Клик по нижней кнопке заказа")
     def click_botom_order_button(self):
-        with allure.step("Ожидание появления кнопки заказа внизу страницы"):
-            order_button_element = WebDriverWait(self.driver, 10).until(
-                EC.presence_of_element_located(self.locators.order_button_2)
-            )
-        with allure.step("Прокрутка к кнопке заказа внизу страницы"):
-            self.driver.execute_script("arguments[0].scrollIntoView({behavior: 'smooth', block: 'center'});",
-                                       order_button_element)
-        with allure.step("Ожидание кликабельности кнопки заказа внизу страницы"):
-            order_button = WebDriverWait(self.driver, 10).until(
-                EC.element_to_be_clickable(self.locators.order_button_2)
-            )
-        with allure.step("Прокрутка и клик по кнопке заказа внизу страницы"):
-            self.driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", order_button)
-            ActionChains(self.driver).move_to_element(order_button).click().perform()
-        with allure.step("Ожидание перехода на страницу заказа"):
-            WebDriverWait(self.driver, 10).until(
-                EC.url_contains("https://qa-scooter.praktikum-services.ru/order")
-            )
+        self.scroll_to_bottom()
+        button = self.wait_and_click_element(self.locators.order_button_2)
+        self.wait_for_url_contains("order")
 
+    @allure.step("Клик по кнопке вопроса {button_number}")
     def click_questions_button(self, button_number, expected_text):
-        with allure.step("Прокрутка страницы до нижней части"):
-            self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-
-        wait = WebDriverWait(self.driver, 5)
-        button_locator = getattr(MainPage.locators, f'title_button_{button_number}')
-
-        with allure.step(f"Ожидание появления кнопки вопроса {button_number}"):
-            target = wait.until(EC.presence_of_element_located(button_locator))
-
-        with allure.step(f"Прокрутка кнопки вопроса {button_number} в видимую область"):
-            self.driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", target)
-
-        with allure.step(f"Ожидание кликабельности кнопки вопроса {button_number} и выполнение клика"):
-            wait.until(EC.element_to_be_clickable(button_locator))
-            self.driver.execute_script("arguments[0].click();", target)
-
-        with allure.step("Ожидание отображения ответа на вопрос"):
-            element = wait.until(EC.visibility_of_element_located((By.XPATH, f"//*[text()='{expected_text}']")))
+        self.scroll_to_bottom()
+        time.sleep(1)
+        question_locator = (By.ID, f"accordion__heading-{button_number - 1}")
+        question = self.wait_and_click_element(question_locator, timeout=10)
+        panel_locator = (By.ID, f"accordion__panel-{button_number - 1}")
+        answer_panel = self.find_element(panel_locator)
+        WebDriverWait(self.driver, 10).until(
+            EC.visibility_of_element_located(panel_locator)
+        )
